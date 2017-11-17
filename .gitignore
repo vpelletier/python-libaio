@@ -1,0 +1,4 @@
+/libaio.egg-info/
+/dist/
+/build/
+*.pyc
