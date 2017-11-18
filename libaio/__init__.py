@@ -30,7 +30,7 @@ class EventFD(object):
     """
     Minimal file-like object for eventfd.
     """
-    def __init__(self, initval, flags):
+    def __init__(self, initval=0, flags=0):
         """
         initval (int 0..2**64 - 1)
             Internal counter value.
