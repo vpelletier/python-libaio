@@ -39,6 +39,12 @@ class EventFD(object):
         """
         self._file = os.fdopen(eventfd.eventfd(initval, flags), 'r+b')
 
+    def close(self):
+        """
+        Close file.
+        """
+        self._file.close()
+
     def read(self):
         """
         Read current counter value.
