@@ -164,6 +164,8 @@ class AIOContext(object):
         """
         self._maxevents = maxevents
         self._submitted = {}
+        # Avoid garbage collection issues on interpreter shutdown.
+        self._io_queue_release = libaio.io_queue_release
 
     def open(self):
         """
@@ -183,7 +185,7 @@ class AIOContext(object):
         """
         if self._ctx is not None:
             # Note: same as io_destroy
-            libaio.io_queue_release(self._ctx)
+            self._io_queue_release(self._ctx)
             del self._ctx
 
     def __enter__(self):
@@ -196,6 +198,13 @@ class AIOContext(object):
     def __exit__(self, exc_type, ex_val, exc_tb):
         """
         Calls close.
+        """
+        self.close()
+
+    def __del__(self):
+        """
+        Calls close, in case instance was not properly closed by the time it
+        gets garbage-collected.
         """
         self.close()
 
