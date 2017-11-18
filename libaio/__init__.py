@@ -163,13 +163,15 @@ class AIOContext(object):
             Maximum number of events this context will have to handle.
         """
         self._maxevents = maxevents
-        self._ctx = libaio.io_context_t()
         self._submitted = {}
 
     def open(self):
         """
         Initialises AIO context.
         """
+        if self._ctx is None:
+            raise ValueError('Already open')
+        self._ctx = libaio.io_context_t()
         # Note: almost same as io_setup
         libaio.io_queue_init(self._maxevents, byref(self._ctx))
 
