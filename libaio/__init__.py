@@ -80,7 +80,7 @@ class AIOBlock(object):
     Defines a (list of) buffer(s) to read into or write from, and what should
     happen on completion.
     """
-    def __init__(self, mode, target_file, buffer_list, offset, callback=None, eventfd=None):
+    def __init__(self, mode, target_file, buffer_list, offset, eventfd=None):
         """
         mode (AIOBLOCK_MODE_READ or AIOBLOCK_MODE_WRITE)
             Whether data should be read into given buffers, or written from
@@ -91,8 +91,6 @@ class AIOBlock(object):
             Buffers to use.
         offset (int)
             Where to start reading from/writing to.
-        callback
-            XXX: not tested !
         eventfd (EventFD)
             An eventfd file, so AIO completion can be waited upon by
             select/poll/epoll.
@@ -109,7 +107,6 @@ class AIOBlock(object):
             )
             for x in buffer_list
         ])
-        self._callback = callback
         self._eventfd = eventfd
         libaio.zero(iocb)
         iocb.aio_fildes = target_file.fileno()
@@ -118,8 +115,6 @@ class AIOBlock(object):
         iocb.u.c.buf = cast(self._iovec, c_void_p)
         iocb.u.c.nbytes = len(buffer_list)
         iocb.u.c.offset = offset
-        if callback is not None:
-            libaio.io_set_callback(iocb, callback)
         if eventfd is not None:
             libaio.io_set_eventfd(iocb, eventfd)
 
