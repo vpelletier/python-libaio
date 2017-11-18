@@ -119,13 +119,6 @@ class AIOBlock(object):
             libaio.io_set_eventfd(iocb, eventfd)
 
     @property
-    def iocb(self):
-        """
-        For internal use only.
-        """
-        return self._iocb
-
-    @property
     def target_file(self):
         """
         The file object given to constructor.
@@ -212,13 +205,14 @@ class AIOContext(object):
         """
         # XXX: if submit fails, we will have some blocks in self._submitted
         # which are not actually submitted.
+        submitted = self._submitted
         for block in block_list:
-            self._submitted[addressof(block.iocb)] = block
+            submitted[addressof(block._iocb)] = block
         libaio.io_submit(
             self._ctx,
             len(block_list),
             (libaio.iocb_p * len(block_list))(*[
-                pointer(x.iocb)
+                pointer(x._iocb)
                 for x in block_list
             ]),
         )
@@ -240,7 +234,7 @@ class AIOContext(object):
         Returns cancelled block's event data.
         """
         event = libaio.io_event()
-        libaio.io_cancel(self._ctx, block.iocb, event)
+        libaio.io_cancel(self._ctx, block._iocb, event)
         return self._eventToPython(event)
 
     def getEvents(self, min_nr=1, nr=None, timeout=None):
