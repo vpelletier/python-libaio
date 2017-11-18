@@ -155,6 +155,8 @@ class AIOContext(object):
     """
     Linux Ashynchronous IO context.
     """
+    _ctx = None
+
     def __init__(self, maxevents):
         """
         maxevents (int)
@@ -177,8 +179,10 @@ class AIOContext(object):
         Waits until all non-cancellable IO blocks finish.
         De-initialises AIO context.
         """
-        # Note: same as io_destroy
-        libaio.io_queue_release(self._ctx)
+        if self._ctx is not None:
+            # Note: same as io_destroy
+            libaio.io_queue_release(self._ctx)
+            del self._ctx
 
     def __enter__(self):
         """
