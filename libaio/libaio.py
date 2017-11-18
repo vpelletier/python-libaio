@@ -171,7 +171,7 @@ io_getevents = _func(
 )
 
 def io_set_callback(iocb, cb):
-    iocb.data = cast(io_callback_t(cb), c_void_p)
+    iocb.data = cast(cb, c_void_p)
 
 def zero(struct):
     memset(byref(struct), 0, sizeof(struct))
