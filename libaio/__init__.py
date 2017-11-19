@@ -231,10 +231,10 @@ class AIOContext(object):
         block (AIOBlock)
             The IO block to cancel.
 
-        Returns cancelled block's event data.
+        Returns cancelled block's event data (see getEvents).
         """
         event = libaio.io_event()
-        libaio.io_cancel(self._ctx, block._iocb, event)
+        libaio.io_cancel(self._ctx, byref(block._iocb), byref(event))
         return self._eventToPython(event)
 
     def getEvents(self, min_nr=1, nr=None, timeout=None):
@@ -250,6 +250,11 @@ class AIOContext(object):
         timeout (float, None):
             Time to wait for events.
             If None, become blocking.
+
+        Returns a list of 3-tuples, containing:
+        - completed AIOBlock instance
+        - res, file-object-type-dependent value
+        - res2, another file-object-type-dependent value
         """
         if nr is None:
             nr = self._maxevents
