@@ -159,7 +159,7 @@ class AIOContext(object):
         """
         Initialises AIO context.
         """
-        if self._ctx is None:
+        if self._ctx is not None:
             raise ValueError('Already open')
         self._ctx = libaio.io_context_t()
         # Note: almost same as io_setup
