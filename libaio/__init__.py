@@ -116,7 +116,10 @@ class AIOBlock(object):
         iocb.u.c.nbytes = len(buffer_list)
         iocb.u.c.offset = offset
         if eventfd is not None:
-            libaio.io_set_eventfd(iocb, eventfd)
+            libaio.io_set_eventfd(
+                iocb,
+                getattr(eventfd, 'fileno', lambda: eventfd)(),
+            )
 
     @property
     def target_file(self):
