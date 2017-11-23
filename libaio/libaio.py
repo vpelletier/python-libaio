@@ -52,26 +52,30 @@ IO_CMD_NOOP = 6
 IO_CMD_PREADV = 7
 IO_CMD_PWRITEV = 8
 
-PADDED, PADDEDptr, PADDEDul = {
+PADDED, PADDEDptr, PADDEDul, PADDEDl = {
     (4, 'little'): (
         lambda w, x, y: [(x, w), (y, c_uint)],
         lambda w, x, y: [(x, w), (y, c_uint)],
         lambda    x, y: [(x, c_ulong), (y, c_uint)],
+        lambda    x, y: [(x, c_long), (y, c_uint)],
     ),
     (8, 'little'): (
         lambda w, x, y: [(x, w), (y, w)],
         lambda w, x, _: [(x, w)],
         lambda    x, _: [(x, c_ulong)],
+        lambda    x, _: [(x, c_long)],
     ),
     (8, 'big'): (
         lambda w, x, y: [(y, c_uint), (x, w)],
         lambda w, x, _: [(x, w)],
         lambda    x, _: [(x, c_ulong)],
+        lambda    x, _: [(x, c_long)],
     ),
     (4, 'big'): (
         lambda w, x, y: [(y, c_uint), (x, w)],
         lambda w, x, y: [(y, c_uint), (x, w)],
         lambda    x, y: [(y, c_uint), (x, c_ulong)],
+        lambda    x, y: [(y, c_uint), (x, c_long)],
     ),
 }[(sizeof(c_ulong), sys.byteorder)]
 
@@ -132,12 +136,13 @@ class io_event(Structure):
     _fields_ = (
         PADDEDptr(c_void_p, 'data', '__pad1') +
         PADDEDptr(iocb_p, 'obj', '__pad2') +
-        PADDEDul('res', '__pad3') +
-        PADDEDul('res2', '__pad4')
+        # libaio declares these unsigned, which contradicts kernel ABI.
+        PADDEDl('res', '__pad3') +
+        PADDEDl('res2', '__pad4')
     )
 io_event_p = POINTER(io_event)
 
-del PADDED, PADDEDptr, PADDEDul
+del PADDED, PADDEDptr, PADDEDul, PADDEDl
 
 io_callback_t = CFUNCTYPE(None, io_context_t, iocb, c_long, c_long)
 
