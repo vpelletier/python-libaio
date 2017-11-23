@@ -39,6 +39,18 @@ class EventFD(object):
         """
         self._file = os.fdopen(eventfd(initval, flags), 'r+b')
 
+    def __enter__(self):
+        """
+        Returns self.
+        """
+        return self
+
+    def __exit__(self, exc_type, ex_val, exc_tb):
+        """
+        Calls self.close().
+        """
+        self.close()
+
     def close(self):
         """
         Close file.
@@ -55,7 +67,7 @@ class EventFD(object):
 
     def write(self, value):
         """
-        Add givel value to counter.
+        Add given value to counter.
         """
         self._file.write(pack('Q', value))
 
