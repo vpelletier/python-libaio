@@ -169,13 +169,6 @@ class AIOContext(object):
         self._submitted = {}
         # Avoid garbage collection issues on interpreter shutdown.
         self._io_queue_release = libaio.io_queue_release
-
-    def open(self):
-        """
-        Initialises AIO context.
-        """
-        if self._ctx is not None:
-            raise ValueError('Already open')
         self._ctx = libaio.io_context_t()
         # Note: almost same as io_setup
         libaio.io_queue_init(self._maxevents, byref(self._ctx))
@@ -193,9 +186,8 @@ class AIOContext(object):
 
     def __enter__(self):
         """
-        Calls open() and returns self.
+        Returns self.
         """
-        self.open()
         return self
 
     def __exit__(self, exc_type, ex_val, exc_tb):
