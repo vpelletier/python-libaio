@@ -149,7 +149,7 @@ io_callback_t = CFUNCTYPE(None, io_context_t, iocb, c_long, c_long)
 libaio = CDLL('libaio.so.1')
 def _raise_on_negative(result, func, arguments):
     if result < 0:
-        raise IOError(-result)
+        raise OSError(-result, func.__name__)
     return result
 
 def _func(name, *args):

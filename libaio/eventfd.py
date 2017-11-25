@@ -18,7 +18,7 @@ from ctypes import CDLL, c_uint, c_int, get_errno
 libc = CDLL("libc.so.6", use_errno=True)
 def _raise_errno_on_neg_one(result, func, arguments):
     if result == -1:
-        raise IOError(get_errno())
+        raise OSError(get_errno(), func.__name__)
     return result
 
 eventfd = libc.eventfd
