@@ -248,9 +248,10 @@ class AIOContext(object):
         """
         Returns a list of event data from submitted IO blocks.
 
-        min_nr (int)
-            When blocking, minimum number of events to collect before
+        min_nr (int, None)
+            When timeout is None, minimum number of events to collect before
             returning.
+            If None, waits for all submitted events.
         nr (int, None)
             Maximum number of events to return.
             If None, set to maxevents given at construction.
@@ -263,6 +264,8 @@ class AIOContext(object):
         - res, file-object-type-dependent value
         - res2, another file-object-type-dependent value
         """
+        if min_nr is None:
+            min_nr = len(self._submitted)
         if nr is None:
             nr = self._maxevents
         if timeout is None:
