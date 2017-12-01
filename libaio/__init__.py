@@ -111,7 +111,7 @@ class AIOBlock(object):
         self._iocb_ref = byref(iocb)
         self._file = target_file
         self._offset = offset
-        self._buffer_list = buffer_list
+        self._buffer_list = tuple(buffer_list)
         self._iovec = (libaio.iovec * len(buffer_list))(*[
             libaio.iovec(
                 cast((c_char * len(x)).from_buffer(x), c_void_p),
