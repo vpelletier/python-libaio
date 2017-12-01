@@ -92,7 +92,15 @@ class AIOBlock(object):
     Defines a (list of) buffer(s) to read into or write from, and what should
     happen on completion.
     """
-    def __init__(self, mode, target_file, buffer_list, offset, eventfd=None):
+    def __init__(
+        self,
+        mode,
+        target_file,
+        buffer_list,
+        offset,
+        eventfd=None,
+        onCompletion=lambda block, res, res2: None,
+    ):
         """
         mode (AIOBLOCK_MODE_READ or AIOBLOCK_MODE_WRITE)
             Whether data should be read into given buffers, or written from
@@ -106,6 +114,12 @@ class AIOBlock(object):
         eventfd (EventFD)
             An eventfd file, so AIO completion can be waited upon by
             select/poll/epoll.
+        onCompletion (callable)
+            Receives as arguments:
+            - the AIOBlock instance which completed
+            - res (int)
+            - res2 (int)
+            For forward compatibility, should return None.
         """
         self._iocb = iocb = libaio.iocb()
         self._iocb_ref = byref(iocb)
@@ -132,6 +146,7 @@ class AIOBlock(object):
                 iocb,
                 getattr(eventfd, 'fileno', lambda: eventfd)(),
             )
+        self._real_onCompletion = onCompletion
 
     @property
     def target_file(self):
@@ -156,16 +171,14 @@ class AIOBlock(object):
 
     def onCompletion(self, res, res2):
         """
-        Called upon block completion.
+        Called by AIOContext upon block completion.
 
         res (int)
         res2 (int)
             target_file-dependent values describing completion conditions.
             Like the number of bytes read/written, error codes, ...
-
-        Does nothing, may be overloaded in subclasses.
         """
-        pass
+        self._real_onCompletion(self, res, res2)
 
 class AIOContext(object):
     """
