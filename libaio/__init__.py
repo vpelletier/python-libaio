@@ -154,6 +154,19 @@ class AIOBlock(object):
         """
         return self._offset
 
+    def onCompletion(self, res, res2):
+        """
+        Called upon block completion.
+
+        res (int)
+        res2 (int)
+            target_file-dependent values describing completion conditions.
+            Like the number of bytes read/written, error codes, ...
+
+        Does nothing, may be overloaded in subclasses.
+        """
+        pass
+
 class AIOContext(object):
     """
     Linux Ashynchronous IO context.
@@ -225,8 +238,10 @@ class AIOContext(object):
         )
 
     def _eventToPython(self, event):
+        aio_block = self._submitted.pop(addressof(event.obj.contents))
+        aio_block.onCompletion(event.res, event.res2)
         return (
-            self._submitted.pop(addressof(event.obj.contents)),
+            aio_block,
             event.res,
             event.res2,
         )
