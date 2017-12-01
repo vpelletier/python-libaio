@@ -114,7 +114,7 @@ class AIOBlock(object):
         self._buffer_list = tuple(buffer_list)
         self._iovec = (libaio.iovec * len(buffer_list))(*[
             libaio.iovec(
-                cast((c_char * len(x)).from_buffer(x), c_void_p),
+                c_void_p(addressof(c_char.from_buffer(x))),
                 len(x),
             )
             for x in buffer_list
