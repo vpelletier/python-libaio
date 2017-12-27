@@ -107,7 +107,7 @@ class AIOBlock(object):
             them.
         target_file (file-ish)
             The file to read from/write to.
-        buffer_list (list of bytearray)
+        buffer_list (list of mutable buffer instances: mmap, bytearray, ...)
             Buffers to use.
         offset (int)
             Where to start reading from/writing to.
