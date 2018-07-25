@@ -147,7 +147,6 @@ class AIOBlock(object):
             "data" meaning depends on class, see ioprio_set(2) manpage.
         """
         self._iocb = iocb = libaio.iocb()
-        self._iocb_ref = byref(iocb)
         self._file = target_file
         self._offset = offset
         self._buffer_list = buffer_list = tuple(buffer_list)
