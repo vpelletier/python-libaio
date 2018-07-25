@@ -13,12 +13,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with python-libaio.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Adaptation of libaio.h .
+"""
 from ctypes import (
     CDLL, CFUNCTYPE, POINTER, Union, Structure, memset, sizeof, byref, c_long,
     c_size_t, c_int64, c_short, c_int, c_uint, c_ulong, c_void_p, c_longlong,
     cast,
 )
 import sys
+# pylint: disable=missing-docstring
 
 class timespec(Structure):
     _fields_ = [
@@ -147,10 +151,12 @@ del PADDED, PADDEDptr, PADDEDul, PADDEDl
 io_callback_t = CFUNCTYPE(None, io_context_t, iocb, c_long, c_long)
 
 libaio = CDLL('libaio.so.1')
+# pylint: disable=unused-argument
 def _raise_on_negative(result, func, arguments):
     if result < 0:
         raise OSError(-result, func.__name__)
     return result
+# pylint: enable=unused-argument
 
 def _func(name, *args):
     result = getattr(libaio, name)
@@ -175,6 +181,7 @@ io_getevents = _func(
     POINTER(timespec),
 )
 
+# pylint: disable=redefined-outer-name, too-many-arguments
 def io_set_callback(iocb, cb):
     iocb.data = cast(cb, c_void_p)
 
@@ -239,3 +246,4 @@ IOCB_FLAG_RESFD = 1 << 0
 def io_set_eventfd(iocb, eventfd):
     iocb.u.c.flags |= IOCB_FLAG_RESFD
     iocb.u.c.resfd = eventfd
+# pylint: enable=redefined-outer-name, too-many-arguments, missing-docstring

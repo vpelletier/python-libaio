@@ -13,6 +13,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with python-libaio.  If not, see <http://www.gnu.org/licenses/>.
+"""
+pythonic wrapper for libaio
+
+With minimal eventfd support to make possible to integrate with usual polling
+mechanisms already available in select module.
+"""
 from __future__ import absolute_import
 from ctypes import addressof, byref, cast, c_char, c_void_p, pointer
 import os
@@ -20,7 +26,9 @@ from struct import pack, unpack
 from . import libaio
 from .eventfd import eventfd, EFD_CLOEXEC, EFD_NONBLOCK, EFD_SEMAPHORE
 from . import linux_fs
+# pylint: disable=wildcard-import
 from .linux_fs import *
+# pylint: enable=wildcard-import
 
 __all__ = (
     'EFD_CLOEXEC', 'EFD_NONBLOCK', 'EFD_SEMAPHORE',
@@ -100,7 +108,9 @@ class AIOBlock(object):
         target_file,
         buffer_list,
         offset,
+        # pylint: disable=redefined-outer-name
         eventfd=None,
+        # pylint: enable=redefined-outer-name
         onCompletion=lambda block, res, res2: None,
         rw_flags=0,
     ):
@@ -253,13 +263,17 @@ class AIOContext(object):
             self._ctx,
             len(block_list),
             (libaio.iocb_p * len(block_list))(*[
+                # pylint: disable=protected-access
                 pointer(x._iocb)
+                # pylint: enable=protected-access
                 for x in block_list
             ]),
         )
         submitted = self._submitted
         for block in block_list[:submitted_count]:
+            # pylint: disable=protected-access
             submitted[addressof(block._iocb)] = block
+            # pylint: enable=protected-access
         return submitted_count
 
     def _eventToPython(self, event):
@@ -281,7 +295,9 @@ class AIOContext(object):
         Returns cancelled block's event data (see getEvents).
         """
         event = libaio.io_event()
+        # pylint: disable=protected-access
         libaio.io_cancel(self._ctx, byref(block._iocb), byref(event))
+        # pylint: enable=protected-access
         return self._eventToPython(event)
 
     def getEvents(self, min_nr=1, nr=None, timeout=None):

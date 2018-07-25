@@ -13,13 +13,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with python-libaio.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Minimal adaptation of sys/eventfd.h and bits/eventfs.h .
+"""
 from ctypes import CDLL, c_uint, c_int, get_errno
 
 libc = CDLL("libc.so.6", use_errno=True)
+# pylint: disable=unused-argument
 def _raise_errno_on_neg_one(result, func, arguments):
     if result == -1:
         raise OSError(get_errno(), func.__name__)
     return result
+# pylint: enable=unused-argument
 
 eventfd = libc.eventfd
 eventfd.restype = c_int
