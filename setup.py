@@ -49,6 +49,7 @@ setup(
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Software Development :: Libraries',
     ],
+    test_suite='libaio.test',
     zip_safe=True,
     **extra
 )
