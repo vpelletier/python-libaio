@@ -242,13 +242,14 @@ class AIOContext(object):
 
         block_list (list of AIOBlock)
             The IO blocks to hand off to kernel.
+
+        Returns the number of successfully submitted blocks.
         """
-        # XXX: if submit fails, we will have some blocks in self._submitted
-        # which are not actually submitted.
-        submitted = self._submitted
-        for block in block_list:
-            submitted[addressof(block._iocb)] = block
-        libaio.io_submit(
+        # io_submit ioctl will only return an error for issues with the first
+        # transfer block. If there are issues with a later block, it will stop
+        # submission and return the number of submitted blocks. So it is safe
+        # to only update self._submitted once io_submit returned.
+        submitted_count = libaio.io_submit(
             self._ctx,
             len(block_list),
             (libaio.iocb_p * len(block_list))(*[
@@ -256,6 +257,10 @@ class AIOContext(object):
                 for x in block_list
             ]),
         )
+        submitted = self._submitted
+        for block in block_list[:submitted_count]:
+            submitted[addressof(block._iocb)] = block
+        return submitted_count
 
     def _eventToPython(self, event):
         aio_block = self._submitted.pop(addressof(event.obj.contents))
