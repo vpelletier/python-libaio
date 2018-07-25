@@ -19,12 +19,14 @@ import os
 from struct import pack, unpack
 from . import libaio
 from .eventfd import eventfd, EFD_CLOEXEC, EFD_NONBLOCK, EFD_SEMAPHORE
+from . import linux_fs
+from .linux_fs import *
 
 __all__ = (
     'EFD_CLOEXEC', 'EFD_NONBLOCK', 'EFD_SEMAPHORE',
     'EventFD', 'AIOBlock', 'AIOContext',
     'AIOBLOCK_MODE_READ', 'AIOBLOCK_MODE_WRITE',
-)
+) + linux_fs.__all__
 
 class EventFD(object):
     """
@@ -100,6 +102,7 @@ class AIOBlock(object):
         offset,
         eventfd=None,
         onCompletion=lambda block, res, res2: None,
+        rw_flags=0,
     ):
         """
         mode (AIOBLOCK_MODE_READ or AIOBLOCK_MODE_WRITE)
@@ -120,6 +123,8 @@ class AIOBlock(object):
             - res (int)
             - res2 (int)
             For forward compatibility, should return None.
+        rw_flags (int)
+            OR-ed RWF_* constants, see aio_rw_flags in io_submit(2) manpage.
         """
         self._iocb = iocb = libaio.iocb()
         self._iocb_ref = byref(iocb)
@@ -138,6 +143,7 @@ class AIOBlock(object):
         iocb.aio_fildes = target_file.fileno()
         iocb.aio_lio_opcode = _AIOBLOCK_MODE_DICT[mode]
         iocb.aio_reqprio = 0
+        iocb.aio_rw_flags = rw_flags
         iocb.u.c.buf = cast(self._iovec, c_void_p)
         iocb.u.c.nbytes = len(buffer_list)
         iocb.u.c.offset = offset

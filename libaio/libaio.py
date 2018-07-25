@@ -118,7 +118,7 @@ class _iocb_u(Union):
 class iocb(Structure):
     _fields_ = (
         PADDEDptr(c_void_p, 'data', '__pad1') +
-        PADDED(c_uint, 'key', '__pad2') +
+        PADDED(c_uint, 'key', 'aio_rw_flags') +
         [
             ('aio_lio_opcode', c_short),
             ('aio_reqprio', c_short),
@@ -181,11 +181,12 @@ def io_set_callback(iocb, cb):
 def zero(struct):
     memset(byref(struct), 0, sizeof(struct))
 
-def _io_prep_prw(opcode, iocb, fd, buf, count, offset):
+def _io_prep_prw(opcode, iocb, fd, buf, count, offset, flags=0):
     zero(iocb)
     iocb.aio_fildes = fd
     iocb.aio_lio_opcode = opcode
     iocb.aio_reqprio = 0
+    iocb.aio_rw_flags = flags
     iocb.u.c.buf = buf
     iocb.u.c.nbytes = count
     iocb.u.c.offset = offset
@@ -201,6 +202,12 @@ def io_prep_preadv(iocb, fd, iov, iovcnt, offset):
 
 def io_prep_pwritev(iocb, fd, iov, iovcnt, offset):
     _io_prep_prw(IO_CMD_PWRITEV, iocb, fd, cast(iov, c_void_p), iovcnt, offset)
+
+def io_prep_preadv2(iocb, fd, iov, iovcnt, offset, flags):
+    _io_prep_prw(IO_CMD_PREADV, iocb, fd, cast(iov, c_void_p), iovcnt, offset, flags)
+
+def io_prep_pwritev2(iocb, fd, iov, iovcnt, offset, flags):
+    _io_prep_prw(IO_CMD_PWRITEV, iocb, fd, cast(iov, c_void_p), iovcnt, offset, flags)
 
 # io_prep_poll
 # io_poll
