@@ -242,6 +242,7 @@ def io_fdsync(ctx, iocb, cb, fd):
     return io_submit(ctx, 1, iocb_pp(byref(iocb)))
 
 IOCB_FLAG_RESFD = 1 << 0
+IOCB_FLAG_IOPRIO = 1 << 1
 
 def io_set_eventfd(iocb, eventfd):
     iocb.u.c.flags |= IOCB_FLAG_RESFD

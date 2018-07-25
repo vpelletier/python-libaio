@@ -26,15 +26,17 @@ from struct import pack, unpack
 from . import libaio
 from .eventfd import eventfd, EFD_CLOEXEC, EFD_NONBLOCK, EFD_SEMAPHORE
 from . import linux_fs
+from . import ioprio
 # pylint: disable=wildcard-import
 from .linux_fs import *
+from .ioprio import *
 # pylint: enable=wildcard-import
 
 __all__ = (
     'EFD_CLOEXEC', 'EFD_NONBLOCK', 'EFD_SEMAPHORE',
     'EventFD', 'AIOBlock', 'AIOContext',
     'AIOBLOCK_MODE_READ', 'AIOBLOCK_MODE_WRITE',
-) + linux_fs.__all__
+) + linux_fs.__all__ + ioprio.__all__
 
 class EventFD(object):
     """
@@ -113,6 +115,7 @@ class AIOBlock(object):
         # pylint: enable=redefined-outer-name
         onCompletion=lambda block, res, res2: None,
         rw_flags=0,
+        io_priority=None,
     ):
         """
         mode (AIOBLOCK_MODE_READ or AIOBLOCK_MODE_WRITE)
@@ -135,6 +138,13 @@ class AIOBlock(object):
             For forward compatibility, should return None.
         rw_flags (int)
             OR-ed RWF_* constants, see aio_rw_flags in io_submit(2) manpage.
+        io_priority (int)
+            Request io priority & class, as returned by IOPRIO_PRIO_VALUE.
+            "class" may be one of:
+                IOPRIO_CLASS_RT: real-time
+                IOPRIO_CLASS_BE: best-effort
+                IOPRIO_CLASS_IDLE: idle
+            "data" meaning depends on class, see ioprio_set(2) manpage.
         """
         self._iocb = iocb = libaio.iocb()
         self._iocb_ref = byref(iocb)
@@ -153,7 +163,9 @@ class AIOBlock(object):
         libaio.zero(iocb)
         iocb.aio_fildes = target_file.fileno()
         iocb.aio_lio_opcode = _AIOBLOCK_MODE_DICT[mode]
-        iocb.aio_reqprio = 0
+        if io_priority is not None:
+            iocb.u.c.flags |= libaio.IOCB_FLAG_IOPRIO
+            iocb.aio_reqprio = io_priority
         iocb.aio_rw_flags = rw_flags
         iocb.u.c.buf = c_void_p(addressof(iovec))
         iocb.u.c.nbytes = buffer_count
