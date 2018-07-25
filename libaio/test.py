@@ -27,9 +27,11 @@ class LibAIOTests(unittest.TestCase):
                 return temp.read()
             temp.write(b'blah')
             temp.flush()
+            completion_event_list = []
+            onCompletion = lambda block, res, res2: completion_event_list.append((block, res, res2))
+
             read_buf_0 = bytearray(2)
             read_buf_1 = bytearray(2)
-            read_completion_event_list = []
             read_block = libaio.AIOBlock(
                 mode=libaio.AIOBLOCK_MODE_READ,
                 target_file=temp,
@@ -38,24 +40,7 @@ class LibAIOTests(unittest.TestCase):
                     read_buf_1,
                 ],
                 offset=0,
-                onCompletion=(
-                    lambda block, res, res2:
-                    read_completion_event_list.append((block, res, res2))
-                ),
-            )
-            write_completion_event_list = []
-            write_block = libaio.AIOBlock(
-                mode=libaio.AIOBLOCK_MODE_WRITE,
-                target_file=temp,
-                buffer_list=[
-                    bytearray(b'u'),
-                    bytearray(b'ez'),
-                ],
-                offset=2,
-                onCompletion=(
-                    lambda block, res, res2:
-                    write_completion_event_list.append((block, res, res2))
-                ),
+                onCompletion=onCompletion,
             )
             io_context.submit([read_block])
             read_event_list_reference = [(read_block, 4, 0)]
@@ -65,11 +50,22 @@ class LibAIOTests(unittest.TestCase):
             )
             self.assertEqual(
                 read_event_list_reference,
-                read_completion_event_list,
+                completion_event_list,
             )
             self.assertEqual(read_buf_0, bytearray(b'bl'))
             self.assertEqual(read_buf_1, bytearray(b'ah'))
+            del completion_event_list[:]
 
+            write_block = libaio.AIOBlock(
+                mode=libaio.AIOBLOCK_MODE_WRITE,
+                target_file=temp,
+                buffer_list=[
+                    bytearray(b'u'),
+                    bytearray(b'ez'),
+                ],
+                offset=2,
+                onCompletion=onCompletion,
+            )
             io_context.submit([write_block])
             write_event_list_reference = [(write_block, 3, 0)]
             self.assertEqual(
@@ -78,9 +74,10 @@ class LibAIOTests(unittest.TestCase):
             )
             self.assertEqual(
                 write_event_list_reference,
-                write_completion_event_list,
+                completion_event_list,
             )
             self.assertEqual(readall(), b'bluez')
+            del completion_event_list[:]
 
 if __name__ == '__main__':
     unittest.main()
