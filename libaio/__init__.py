@@ -36,6 +36,7 @@ __all__ = (
     'EFD_CLOEXEC', 'EFD_NONBLOCK', 'EFD_SEMAPHORE',
     'EventFD', 'AIOBlock', 'AIOContext',
     'AIOBLOCK_MODE_READ', 'AIOBLOCK_MODE_WRITE',
+    'AIOBLOCK_MODE_FSYNC', 'AIOBLOCK_MODE_FDSYNC',
 ) + linux_fs.__all__ + ioprio.__all__
 
 class EventFD(object):
@@ -91,10 +92,14 @@ class EventFD(object):
 
 AIOBLOCK_MODE_READ = object()
 AIOBLOCK_MODE_WRITE = object()
+AIOBLOCK_MODE_FSYNC = object()
+AIOBLOCK_MODE_FDSYNC = object()
 
 _AIOBLOCK_MODE_DICT = {
     AIOBLOCK_MODE_READ: libaio.IO_CMD_PREADV,
     AIOBLOCK_MODE_WRITE: libaio.IO_CMD_PWRITEV,
+    AIOBLOCK_MODE_FSYNC: libaio.IO_CMD_FSYNC,
+    AIOBLOCK_MODE_FDSYNC: libaio.IO_CMD_FDSYNC,
 }
 
 class AIOBlock(object):
@@ -108,8 +113,8 @@ class AIOBlock(object):
         self,
         mode,
         target_file,
-        buffer_list,
-        offset,
+        buffer_list=(),
+        offset=0,
         # pylint: disable=redefined-outer-name
         eventfd=None,
         # pylint: enable=redefined-outer-name
@@ -118,9 +123,8 @@ class AIOBlock(object):
         io_priority=None,
     ):
         """
-        mode (AIOBLOCK_MODE_READ or AIOBLOCK_MODE_WRITE)
-            Whether data should be read into given buffers, or written from
-            them.
+        mode (AIOBLOCK_MODE_*)
+            The action this block represents.
         target_file (file-ish)
             The file to read from/write to.
         buffer_list (list of mutable buffer instances: mmap, bytearray, ...)
@@ -150,14 +154,6 @@ class AIOBlock(object):
         self._file = target_file
         self._offset = offset
         self._buffer_list = buffer_list = tuple(buffer_list)
-        buffer_count = len(buffer_list)
-        self._iovec = iovec = (libaio.iovec * buffer_count)(*[
-            libaio.iovec(
-                c_void_p(addressof(c_char.from_buffer(x))),
-                len(x),
-            )
-            for x in buffer_list
-        ])
         self._eventfd = eventfd
         libaio.zero(iocb)
         iocb.aio_fildes = target_file.fileno()
@@ -165,9 +161,18 @@ class AIOBlock(object):
         if io_priority is not None:
             iocb.u.c.flags |= libaio.IOCB_FLAG_IOPRIO
             iocb.aio_reqprio = io_priority
+        if buffer_list:
+            buffer_count = len(buffer_list)
+            self._iovec = iovec = (libaio.iovec * buffer_count)(*[
+                libaio.iovec(
+                    c_void_p(addressof(c_char.from_buffer(x))),
+                    len(x),
+                )
+                for x in buffer_list
+            ])
+            iocb.u.c.buf = c_void_p(addressof(iovec))
+            iocb.u.c.nbytes = buffer_count
         iocb.aio_rw_flags = rw_flags
-        iocb.u.c.buf = c_void_p(addressof(iovec))
-        iocb.u.c.nbytes = buffer_count
         iocb.u.c.offset = offset
         if eventfd is not None:
             libaio.io_set_eventfd(

@@ -79,5 +79,39 @@ class LibAIOTests(unittest.TestCase):
             self.assertEqual(readall(), b'bluez')
             del completion_event_list[:]
 
+            fsync_block = libaio.AIOBlock(
+                mode=libaio.AIOBLOCK_MODE_FSYNC,
+                target_file=temp,
+                onCompletion=onCompletion,
+            )
+            io_context.submit([fsync_block])
+            fsync_event_list_reference = [(fsync_block, 0, 0)]
+            self.assertEqual(
+                fsync_event_list_reference,
+                io_context.getEvents(min_nr=None),
+            )
+            self.assertEqual(
+                fsync_event_list_reference,
+                completion_event_list,
+            )
+            del completion_event_list[:]
+
+            fdsync_block = libaio.AIOBlock(
+                mode=libaio.AIOBLOCK_MODE_FDSYNC,
+                target_file=temp,
+                onCompletion=onCompletion,
+            )
+            io_context.submit([fdsync_block])
+            fdsync_event_list_reference = [(fdsync_block, 0, 0)]
+            self.assertEqual(
+                fdsync_event_list_reference,
+                io_context.getEvents(min_nr=None),
+            )
+            self.assertEqual(
+                fdsync_event_list_reference,
+                completion_event_list,
+            )
+            del completion_event_list[:]
+
 if __name__ == '__main__':
     unittest.main()
