@@ -130,7 +130,8 @@ class AIOBlock(object):
         self._iocb_ref = byref(iocb)
         self._file = target_file
         self._offset = offset
-        self._buffer_list = tuple(buffer_list)
+        self._buffer_list = buffer_list = tuple(buffer_list)
+        buffer_count = len(buffer_list)
         self._iovec = iovec = (libaio.iovec * buffer_count)(*[
             libaio.iovec(
                 c_void_p(addressof(c_char.from_buffer(x))),
@@ -145,7 +146,7 @@ class AIOBlock(object):
         iocb.aio_reqprio = 0
         iocb.aio_rw_flags = rw_flags
         iocb.u.c.buf = c_void_p(addressof(iovec))
-        iocb.u.c.nbytes = len(buffer_list)
+        iocb.u.c.nbytes = buffer_count
         iocb.u.c.offset = offset
         if eventfd is not None:
             libaio.io_set_eventfd(
