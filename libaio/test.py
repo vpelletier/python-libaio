@@ -16,6 +16,7 @@
 # along with python-libaio.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, print_function
 import unittest
+import select
 import tempfile
 import libaio
 
@@ -109,6 +110,24 @@ class LibAIOTests(unittest.TestCase):
             )
             self.assertEqual(
                 fdsync_event_list_reference,
+                completion_event_list,
+            )
+            del completion_event_list[:]
+
+            poll_block = libaio.AIOBlock(
+                mode=libaio.AIOBLOCK_MODE_POLL,
+                target_file=temp,
+                onCompletion=onCompletion,
+                event_mask=select.EPOLLIN,
+            )
+            io_context.submit([poll_block])
+            poll_event_list_reference = [(poll_block, 0, 0)]
+            self.assertEqual(
+                poll_event_list_reference,
+                io_context.getEvents(min_nr=None),
+            )
+            self.assertEqual(
+                poll_event_list_reference,
                 completion_event_list,
             )
             del completion_event_list[:]

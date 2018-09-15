@@ -38,6 +38,7 @@ __all__ = (
     'EventFD', 'AIOBlock', 'AIOContext',
     'AIOBLOCK_MODE_READ', 'AIOBLOCK_MODE_WRITE',
     'AIOBLOCK_MODE_FSYNC', 'AIOBLOCK_MODE_FDSYNC',
+    'AIOBLOCK_MODE_POLL',
 ) + linux_fs.__all__ + ioprio.__all__
 
 class EventFD(object):
@@ -95,12 +96,14 @@ AIOBLOCK_MODE_READ = object()
 AIOBLOCK_MODE_WRITE = object()
 AIOBLOCK_MODE_FSYNC = object()
 AIOBLOCK_MODE_FDSYNC = object()
+AIOBLOCK_MODE_POLL = object()
 
 _AIOBLOCK_MODE_DICT = {
     AIOBLOCK_MODE_READ: libaio.IO_CMD_PREADV,
     AIOBLOCK_MODE_WRITE: libaio.IO_CMD_PWRITEV,
     AIOBLOCK_MODE_FSYNC: libaio.IO_CMD_FSYNC,
     AIOBLOCK_MODE_FDSYNC: libaio.IO_CMD_FDSYNC,
+    AIOBLOCK_MODE_POLL: libaio.IO_CMD_POLL,
 }
 
 class AIOBlock(object):
@@ -122,6 +125,7 @@ class AIOBlock(object):
         onCompletion=lambda block, res, res2: None,
         rw_flags=0,
         io_priority=None,
+        event_mask=0,
     ):
         """
         mode (AIOBLOCK_MODE_*)
@@ -130,8 +134,10 @@ class AIOBlock(object):
             The file to read from/write to.
         buffer_list (list of mutable buffer instances: mmap, bytearray, ...)
             Buffers to use.
+            Must be empty in AIOBLOCK_MODE_POLL.
         offset (int)
             Where to start reading from/writing to.
+            Must be zero in AIOBLOCK_MODE_POLL.
         eventfd (EventFD)
             An eventfd file, so AIO completion can be waited upon by
             select/poll/epoll.
@@ -143,6 +149,7 @@ class AIOBlock(object):
             For forward compatibility, should return None.
         rw_flags (int)
             OR-ed RWF_* constants, see aio_rw_flags in io_submit(2) manpage.
+            Must be zero in AIOBLOCK_MODE_POLL.
         io_priority (int)
             Request io priority & class, as returned by IOPRIO_PRIO_VALUE.
             "class" may be one of:
@@ -150,6 +157,9 @@ class AIOBlock(object):
                 IOPRIO_CLASS_BE: best-effort
                 IOPRIO_CLASS_IDLE: idle
             "data" meaning depends on class, see ioprio_set(2) manpage.
+        event_mask (int)
+            OR-ed select.EPOLL* constants. EPOLLERR and EPOLLHUP are always
+            enabled.
         """
         self._iocb = iocb = libaio.iocb()
         self._file = target_file
@@ -162,6 +172,8 @@ class AIOBlock(object):
         if io_priority is not None:
             iocb.u.c.flags |= libaio.IOCB_FLAG_IOPRIO
             iocb.aio_reqprio = io_priority
+        if mode is AIOBLOCK_MODE_POLL:
+            iocb.u.c.buf = c_void_p(event_mask)
         if buffer_list:
             buffer_count = len(buffer_list)
             self._iovec = iovec = (libaio.iovec * buffer_count)(*[
