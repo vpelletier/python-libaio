@@ -308,12 +308,19 @@ class AIOContext(object):
         block (AIOBlock)
             The IO block to cancel.
 
-        Returns cancelled block's event data (see getEvents).
+        Returns cancelled block's event data (see getEvents), or None if the
+        kernel returned EINPROGRESS. In the latter case, event completion will
+        happen on a later getEvents call.
         """
         event = libaio.io_event()
-        # pylint: disable=protected-access
-        libaio.io_cancel(self._ctx, byref(block._iocb), byref(event))
-        # pylint: enable=protected-access
+        try:
+            # pylint: disable=protected-access
+            libaio.io_cancel(self._ctx, byref(block._iocb), byref(event))
+            # pylint: enable=protected-access
+        except OSError as exc:
+            if exc.errno == errno.EINPROGRESS:
+                return None
+            raise
         return self._eventToPython(event)
 
     def getEvents(self, min_nr=1, nr=None, timeout=None):
