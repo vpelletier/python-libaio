@@ -323,6 +323,19 @@ class AIOContext(object):
             raise
         return self._eventToPython(event)
 
+    def cancelAll(self):
+        """
+        Cancel all submitted IO blocks.
+
+        Blocks until all submitted transfers have been finalised.
+        Submitting more transfers while this method is running produces
+        undefined behaviour.
+        Returns the list of values returned by individual cancellations.
+        See "cancel" documentation.
+        """
+        cancel = self.cancel
+        return [cancel(block) for block in self._submitted.itervalues()]
+
     def getEvents(self, min_nr=1, nr=None, timeout=None):
         """
         Returns a list of event data from submitted IO blocks.
