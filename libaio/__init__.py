@@ -335,7 +335,17 @@ class AIOContext(object):
         See "cancel" documentation.
         """
         cancel = self.cancel
-        return [cancel(block) for block in self._submitted.itervalues()]
+        result = []
+        for block in self._submitted.itervalues():
+            try:
+                result.append(cancel(block))
+            except OSError, exc:
+                # EINVAL should mean we requested to cancel a not-in-flight
+                # transfer - maybe it was just completed and we just did
+                # not process its completion event yet.
+                if exc.errno != errno.EINVAL:
+                    raise
+        return result
 
     def getEvents(self, min_nr=1, nr=None, timeout=None):
         """
