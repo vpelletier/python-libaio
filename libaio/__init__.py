@@ -21,6 +21,7 @@ mechanisms already available in select module.
 """
 from __future__ import absolute_import
 from ctypes import addressof, byref, cast, c_char, c_void_p, pointer
+import errno
 import os
 from struct import pack, unpack
 from . import libaio
