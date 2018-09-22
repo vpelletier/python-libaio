@@ -341,8 +341,8 @@ class AIOContext(object):
         Cancel all submitted IO blocks.
 
         Blocks until all submitted transfers have been finalised.
-        Submitting more transfers while this method is running produces
-        undefined behaviour.
+        Submitting more transfers or processing completion events while this
+        method is running produces undefined behaviour.
         Returns the list of values returned by individual cancellations.
         See "cancel" documentation.
         """
