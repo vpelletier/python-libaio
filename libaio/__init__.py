@@ -369,7 +369,8 @@ class AIOContext(object):
             If None, waits for all submitted events.
         nr (int, None)
             Maximum number of events to return.
-            If None, set to maxevents given at construction.
+            If None, set to maxevents given at construction or to the number of
+            currently submitted events, whichever is larger.
         timeout (float, None):
             Time to wait for events.
             If None, become blocking.
@@ -382,7 +383,7 @@ class AIOContext(object):
         if min_nr is None:
             min_nr = len(self._submitted)
         if nr is None:
-            nr = self._maxevents
+            nr = max(len(self._submitted), self._maxevents)
         if timeout is None:
             timeoutp = None
         else:
