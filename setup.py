@@ -18,10 +18,6 @@ from codecs import open
 import os
 import sys
 
-extra = {}
-if sys.version_info >= (3, ):
-    extra['use_2to3'] = True
-
 long_description = open(
     os.path.join(os.path.dirname(__file__), 'README.rst'),
     encoding='utf8',
@@ -32,7 +28,7 @@ setup(
     description=next(x for x in long_description.splitlines() if x.strip()),
     long_description='.. contents::\n\n' + long_description,
     keywords='linux aio libaio',
-    version='0.4',
+    version='0.5',
     author='Vincent Pelletier',
     author_email='plr.vincent@gmail.com',
     url='http://github.com/vpelletier/python-libaio',
@@ -51,5 +47,5 @@ setup(
     ],
     test_suite='libaio.test',
     zip_safe=True,
-    **extra
+    use_2to3=sys.version_info >= (3, ),
 )
