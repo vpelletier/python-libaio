@@ -241,9 +241,10 @@ class AIOContext(object):
         self._submitted = {}
         # Avoid garbage collection issues on interpreter shutdown.
         self._io_queue_release = libaio.io_queue_release
-        self._ctx = libaio.io_context_t()
+        ctx = libaio.io_context_t()
         # Note: almost same as io_setup
-        libaio.io_queue_init(self._maxevents, byref(self._ctx))
+        libaio.io_queue_init(self._maxevents, byref(ctx))
+        self._ctx = ctx
 
     def close(self):
         """
