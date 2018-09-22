@@ -351,7 +351,7 @@ class AIOContext(object):
         for block in self._submitted.itervalues():
             try:
                 result.append(cancel(block))
-            except OSError, exc:
+            except OSError as exc:
                 # EINVAL should mean we requested to cancel a not-in-flight
                 # transfer - maybe it was just completed and we just did
                 # not process its completion event yet.
