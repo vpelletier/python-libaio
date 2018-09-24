@@ -120,7 +120,7 @@ class AIOBlock(object):
     def __init__(
         self,
         mode,
-        target_file,
+        target_file=None,
         buffer_list=(),
         offset=0,
         # pylint: disable=redefined-outer-name
@@ -212,7 +212,10 @@ class AIOBlock(object):
     @target_file.setter
     def target_file(self, value):
         self._file = value
-        self._iocb.aio_fildes = value.fileno()
+        if value is None:
+            self._iocb.aio_fildes = 0
+        else:
+            self._iocb.aio_fildes = value.fileno()
 
     @property
     def buffer_list(self):
