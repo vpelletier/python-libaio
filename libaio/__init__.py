@@ -98,14 +98,6 @@ AIOBLOCK_MODE_FSYNC = object()
 AIOBLOCK_MODE_FDSYNC = object()
 AIOBLOCK_MODE_POLL = object()
 
-_AIOBLOCK_MODE_DICT = {
-    AIOBLOCK_MODE_READ: libaio.IO_CMD_PREADV,
-    AIOBLOCK_MODE_WRITE: libaio.IO_CMD_PWRITEV,
-    AIOBLOCK_MODE_FSYNC: libaio.IO_CMD_FSYNC,
-    AIOBLOCK_MODE_FDSYNC: libaio.IO_CMD_FDSYNC,
-    AIOBLOCK_MODE_POLL: libaio.IO_CMD_POLL,
-}
-
 class AIOBlock(object):
     """
     Asynchronous I/O block.
@@ -113,6 +105,18 @@ class AIOBlock(object):
     Defines a (list of) buffer(s) to read into or write from, and what should
     happen on completion.
     """
+    _AIOBLOCK_MODE_DICT = {
+        AIOBLOCK_MODE_READ: libaio.IO_CMD_PREADV,
+        AIOBLOCK_MODE_WRITE: libaio.IO_CMD_PWRITEV,
+        AIOBLOCK_MODE_FSYNC: libaio.IO_CMD_FSYNC,
+        AIOBLOCK_MODE_FDSYNC: libaio.IO_CMD_FDSYNC,
+        AIOBLOCK_MODE_POLL: libaio.IO_CMD_POLL,
+    }
+    _REVERSE_AIOBLOCK_MODE_DICT = {
+        y: x for x, y in _AIOBLOCK_MODE_DICT.iteritems()
+    }
+    assert len(_AIOBLOCK_MODE_DICT) == len(_REVERSE_AIOBLOCK_MODE_DICT)
+
     def __init__(
         self,
         mode,
@@ -162,20 +166,76 @@ class AIOBlock(object):
             enabled.
         """
         self._iocb = iocb = libaio.iocb()
-        self._file = target_file
-        self._offset = offset
-        self._buffer_list = buffer_list = tuple(buffer_list)
-        self._eventfd = eventfd
         libaio.zero(iocb)
-        iocb.aio_fildes = target_file.fileno()
-        iocb.aio_lio_opcode = _AIOBLOCK_MODE_DICT[mode]
-        if io_priority is not None:
-            iocb.u.c.flags |= libaio.IOCB_FLAG_IOPRIO
-            iocb.aio_reqprio = io_priority
+        self.mode = mode
+        self.target_file = target_file
+        self.io_priority = io_priority
         if mode is AIOBLOCK_MODE_POLL:
-            iocb.u.c.buf = c_void_p(event_mask)
-        if buffer_list:
-            buffer_count = len(buffer_list)
+            self.event_mask = event_mask
+        else:
+            self.buffer_list = buffer_list
+            self.offset = offset
+            self.rw_flags = rw_flags
+        self.eventfd = eventfd
+        self.onCompletion = onCompletion
+
+    @property
+    def mode(self):
+        """
+        This instance's mode.
+
+        Clears buffer_list, offset, event_mask and rw_flags when changed
+        between AIOBLOCK_MODE_POLL and any other mode.
+        """
+        return self._REVERSE_AIOBLOCK_MODE_DICT[self._iocb.aio_lio_opcode]
+
+    @mode.setter
+    def mode(self, value):
+        old_opcode = self._iocb.aio_lio_opcode
+        new_opcode = self._AIOBLOCK_MODE_DICT[value]
+        if old_opcode != new_opcode:
+            if new_opcode == libaio.IO_CMD_POLL:
+                self.buffer_list = ()
+                self.offset = 0
+                self.rw_flags = 0
+            elif old_opcode == libaio.IO_CMD_POLL:
+                self.event_mask = 0
+        self._iocb.aio_lio_opcode = new_opcode
+
+    @property
+    def target_file(self):
+        """
+        The file object this instance operates on.
+        """
+        return self._file
+
+    @target_file.setter
+    def target_file(self, value):
+        self._file = value
+        self._iocb.aio_fildes = value.fileno()
+
+    @property
+    def buffer_list(self):
+        """
+        The buffer list this instance operates on.
+
+        Only available in mode != AIOBLOCK_MODE_POLL.
+
+        Changes on a submitted transfer are not fully applied until its
+        next submission: kernel will still be using original buffer list.
+        """
+        if self._iocb.aio_lio_opcode == libaio.IO_CMD_POLL:
+            raise AttributeError
+        return self._buffer_list
+
+    @buffer_list.setter
+    def buffer_list(self, value):
+        if self._iocb.aio_lio_opcode == libaio.IO_CMD_POLL:
+            raise AttributeError
+        buffer_list = tuple(value)
+        iocb = self._iocb
+        iocb.u.c.nbytes = buffer_count = len(buffer_list)
+        if buffer_count:
             self._iovec = iovec = (libaio.iovec * buffer_count)(*[
                 libaio.iovec(
                     c_void_p(addressof(c_char.from_buffer(x))),
@@ -184,38 +244,43 @@ class AIOBlock(object):
                 for x in buffer_list
             ])
             iocb.u.c.buf = c_void_p(addressof(iovec))
-            iocb.u.c.nbytes = buffer_count
-        iocb.aio_rw_flags = rw_flags
-        iocb.u.c.offset = offset
-        if eventfd is not None:
-            libaio.io_set_eventfd(
-                iocb,
-                getattr(eventfd, 'fileno', lambda: eventfd)(),
-            )
-        self._real_onCompletion = onCompletion
+        else:
+            iocb.u.c.buf = None
+            self._iovec = None
+        self._buffer_list = buffer_list
 
     @property
-    def target_file(self):
+    def event_mask(self):
         """
-        The file object given to constructor.
-        """
-        return self._file
+        The events this block will wait for.
 
-    @property
-    def buffer_list(self):
+        Only available in mode == AIOBLOCK_MODE_POLL.
         """
-        The buffer list given to constructor.
-        """
-        return self._buffer_list
+        if self._iocb.aio_lio_opcode != libaio.IO_CMD_POLL:
+            raise AttributeError
+        return self._iocb.u.c.buf.value
+
+    @event_mask.setter
+    def event_mask(self, value):
+        if self._iocb.aio_lio_opcode != libaio.IO_CMD_POLL:
+            raise AttributeError
+        self._iocb.u.c.buf = c_void_p(value)
 
     @property
     def offset(self):
         """
-        The offset given to constructor.
-        """
-        return self._offset
+        The file offset this instance writes to/reads from.
 
-    def onCompletion(self, res, res2):
+        Only available in mode != AIOBLOCK_MODE_POLL.
+        """
+        return self._iocb.u.c.offset.value
+
+    @offset.setter
+    def offset(self, value):
+        self._iocb.u.c.offset = value
+
+    @property
+    def onCompletion(self):
         """
         Called by AIOContext upon block completion.
 
@@ -224,7 +289,74 @@ class AIOBlock(object):
             target_file-dependent values describing completion conditions.
             Like the number of bytes read/written, error codes, ...
         """
-        self._real_onCompletion(self, res, res2)
+        return self._onCompletion
+
+    @onCompletion.setter
+    def onCompletion(self, value):
+        self._onCompletion = value
+
+    @property
+    def io_priority(self):
+        """
+        IO priority for this instance.
+        """
+        return (
+            self._iocb.aio_reqprio
+            if self._iocb.u.c.flags & libaio.IOCB_FLAG_IOPRIO else
+            None
+        )
+
+    @io_priority.setter
+    def io_priority(self, value):
+        iocb = self._iocb
+        if value is None:
+            iocb.u.c.flags &= ~libaio.IOCB_FLAG_IOPRIO
+            iocb.aio_reqprio = 0
+        else:
+            iocb.u.c.flags |= libaio.IOCB_FLAG_IOPRIO
+            iocb.aio_reqprio = value
+
+    @property
+    def rw_flags(self):
+        """
+        RWF_* bitmask.
+
+        Only available in mode != AIOBLOCK_MODE_POLL.
+        """
+        if self._iocb.aio_lio_opcode == libaio.IO_CMD_POLL:
+            raise AttributeError
+        return self._iocb.aio_rw_flags
+
+    @rw_flags.setter
+    def rw_flags(self, value):
+        if self._iocb.aio_lio_opcode == libaio.IO_CMD_POLL:
+            raise AttributeError
+        self._iocb.aio_rw_flags = value
+
+    @property
+    def eventfd(self):
+        """
+        eventfd file to use for event notifications.
+        """
+        return self._eventfd
+
+    @eventfd.setter
+    def eventfd(self, value):
+        iocb = self._iocb
+        if value is None:
+            iocb.u.c.flags &= ~libaio.IOCB_FLAG_RESFD
+            iocb.u.c.resfd = 0
+        else:
+            iocb.u.c.flags |= libaio.IOCB_FLAG_RESFD
+            iocb.u.c.resfd = getattr(value, 'fileno', lambda: value)()
+        self._eventfd = eventfd
+
+    def _getSubmissionState(self):
+        """
+        For internal use only.
+        """
+        # Returns all values which must not be garbage collected until completion.
+        return (self._buffer_list, self._iovec)
 
 class AIOContext(object):
     """
@@ -302,13 +434,13 @@ class AIOContext(object):
         submitted = self._submitted
         for block in block_list[:submitted_count]:
             # pylint: disable=protected-access
-            submitted[addressof(block._iocb)] = block
+            submitted[addressof(block._iocb)] = (block, block._getSubmissionState())
             # pylint: enable=protected-access
         return submitted_count
 
     def _eventToPython(self, event):
-        aio_block = self._submitted.pop(addressof(event.obj.contents))
-        aio_block.onCompletion(event.res, event.res2)
+        aio_block, _ = self._submitted.pop(addressof(event.obj.contents))
+        aio_block.onCompletion(aio_block, event.res, event.res2)
         return (
             aio_block,
             event.res,
@@ -349,7 +481,7 @@ class AIOContext(object):
         """
         cancel = self.cancel
         result = []
-        for block in self._submitted.itervalues():
+        for block, _ in self._submitted.itervalues():
             try:
                 result.append(cancel(block))
             except OSError as exc:
