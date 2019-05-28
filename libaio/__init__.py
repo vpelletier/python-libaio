@@ -242,7 +242,7 @@ class AIOBlock(object):
             self._iovec = iovec = (libaio.iovec * buffer_count)(*[
                 libaio.iovec(
                     c_void_p(addressof(c_char.from_buffer(x))),
-                    len(x),
+                    memoryview(x).nbytes,
                 )
                 for x in buffer_list
             ])
