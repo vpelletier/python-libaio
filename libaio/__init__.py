@@ -22,6 +22,7 @@ mechanisms already available in select module.
 from __future__ import absolute_import
 from ctypes import addressof, byref, cast, c_char, c_void_p, pointer
 import errno
+from mmap import mmap
 import os
 from struct import pack, unpack
 from . import libaio
@@ -242,7 +243,9 @@ class AIOBlock(object):
             self._iovec = iovec = (libaio.iovec * buffer_count)(*[
                 libaio.iovec(
                     c_void_p(addressof(c_char.from_buffer(x))),
-                    len(x),
+                    # Mimic file.write, with workaround for python2.7 bug:
+                    # mmap objects are rejected by memoryview.
+                    len(x if isinstance(x, mmap) else memoryview(x)),
                 )
                 for x in buffer_list
             ])

@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with python-libaio.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, print_function
+from mmap import mmap
 import unittest
 import select
 import tempfile
@@ -32,7 +33,7 @@ class LibAIOTests(unittest.TestCase):
             onCompletion = lambda block, res, res2: completion_event_list.append((block, res, res2))
 
             read_buf_0 = bytearray(2)
-            read_buf_1 = bytearray(2)
+            read_buf_1 = mmap(-1, 2)
             read_block = libaio.AIOBlock(
                 mode=libaio.AIOBLOCK_MODE_READ,
                 target_file=temp,
@@ -54,7 +55,7 @@ class LibAIOTests(unittest.TestCase):
                 completion_event_list,
             )
             self.assertEqual(read_buf_0, bytearray(b'bl'))
-            self.assertEqual(read_buf_1, bytearray(b'ah'))
+            self.assertEqual(list(read_buf_1), [b'a', b'h'])
             del completion_event_list[:]
 
             write_block = libaio.AIOBlock(
