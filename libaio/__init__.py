@@ -236,6 +236,9 @@ class AIOBlock(object):
     def buffer_list(self, value):
         if self._iocb.aio_lio_opcode == libaio.IO_CMD_POLL:
             raise AttributeError
+        # Keep a reference to original buffers, in case caller does not, so
+        # they do not get garbage-collected. Make it a tuple to avoid caller
+        # mutating "value".
         buffer_list = tuple(value)
         iocb = self._iocb
         iocb.u.c.nbytes = buffer_count = len(buffer_list)
