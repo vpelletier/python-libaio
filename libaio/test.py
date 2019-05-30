@@ -15,7 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with python-libaio.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, print_function
+import errno
 from mmap import mmap
+import os
 import unittest
 import select
 import tempfile
@@ -30,7 +32,9 @@ class LibAIOTests(unittest.TestCase):
             temp.write(b'blah')
             temp.flush()
             completion_event_list = []
-            onCompletion = lambda block, res, res2: completion_event_list.append((block, res, res2))
+            onCompletion = lambda block, res, res2: (
+                completion_event_list.append((block, res, res2))
+            )
 
             read_buf_0 = bytearray(2)
             read_buf_1 = mmap(-1, 2)
@@ -115,23 +119,47 @@ class LibAIOTests(unittest.TestCase):
             )
             del completion_event_list[:]
 
-            poll_block = libaio.AIOBlock(
-                mode=libaio.AIOBLOCK_MODE_POLL,
-                target_file=temp,
-                onCompletion=onCompletion,
-                event_mask=select.EPOLLIN,
+    def testPoll(self):
+        with libaio.AIOContext(1) as io_context:
+            completion_event_list = []
+            onCompletion = lambda block, res, res2: (
+                completion_event_list.append((block, res, res2))
             )
-            io_context.submit([poll_block])
-            poll_event_list_reference = [(poll_block, 0, 0)]
-            self.assertEqual(
-                poll_event_list_reference,
-                io_context.getEvents(min_nr=None),
-            )
-            self.assertEqual(
-                poll_event_list_reference,
-                completion_event_list,
-            )
-            del completion_event_list[:]
+            read_end, write_end = os.pipe()
+            try:
+                poll_block = libaio.AIOBlock(
+                    mode=libaio.AIOBLOCK_MODE_POLL,
+                    target_file=read_end,
+                    onCompletion=onCompletion,
+                    event_mask=select.EPOLLIN,
+                )
+                try:
+                    io_context.submit([poll_block])
+                except OSError as exc:
+                    if exc.errno != errno.EINVAL:
+                        raise
+                    raise SkipTest('POLL kernel support missing')
+                self.assertEqual([], io_context.getEvents(min_nr=0))
+                self.assertEqual([], completion_event_list)
+                os.write(write_end, 'foo')
+                poll_event_list_reference = [(
+                    poll_block,
+                    select.EPOLLIN | select.EPOLLRDNORM,
+                    0,
+                )]
+                self.assertEqual(
+                    poll_event_list_reference,
+                    io_context.getEvents(min_nr=None),
+                )
+                self.assertEqual(
+                    poll_event_list_reference,
+                    completion_event_list,
+                )
+                del completion_event_list[:]
+            finally:
+                os.close(write_end)
+                os.close(read_end)
+
 
 if __name__ == '__main__':
     unittest.main()
