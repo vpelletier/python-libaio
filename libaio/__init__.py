@@ -426,6 +426,9 @@ class AIOContext(object):
 
         Returns the number of successfully submitted blocks.
         """
+        # A non-set file will cause an AIO block on stdin, which is likely not
+        # expected. Do this extra check when assertions are enabled.
+        assert not any(x.target_file is None for x in block_list)
         # io_submit ioctl will only return an error for issues with the first
         # transfer block. If there are issues with a later block, it will stop
         # submission and return the number of submitted blocks. So it is safe
