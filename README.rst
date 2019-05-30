@@ -1,7 +1,58 @@
 Linux AIO API wrapper
 
 This is about in-kernel, file-descriptor-based asynchronous I/O.
-It has nothing to do with the `asyncio` standard module.
+It has nothing to do with the ``asyncio`` standard module.
+
+Linux AIO primer
+----------------
+
+When sending or expecting data, the typical issue a developer faces is knowing
+when the operation will complete, so the program can carry on.
+
+- read/write/recv/send: blocks until stuff happened
+- same, on a non-blocking file descriptor: errors out instead of blocking,
+  developper has to implement retry somehow, and may end up wasting CPU time
+  just resubmitting the same operation over and over.
+- select/poll/epoll: kernel tells the program when (re)submitting an operation
+  should not block (if developer is careful to not have competing IO sources)
+
+AIO is the next level: the application expresses the intention that some IO
+operation happens when the file descriptor accepts it *and* provides
+corresponding buffer to the kernel.
+Compared to select/poll/epoll, this avoids one round-trip to userland when the
+operation becomes possible:
+
+- kernel sends notification (ex: fd is readable)
+- program initiates actual IO (ex: read from fd)
+
+Instead, kernel only has to notify userland the operation is already completed,
+and application may either process received data, or submit more data to send.
+
+Edge cases
+----------
+
+Because of this high level of integration, low-level implementation
+constraints which are abstracted by higher-overhead APIs may become apparent.
+
+For example, when submitting AIO blocks to an USB gadget endpoint file, the
+block should be aligned to page boundaries because some USB Device Controllers
+do not have the ability to read/write partial pages.
+
+In python, this means ``mmap`` should be used to allocate such buffer instead
+of just any ``bytearray``.
+
+Another place where implementation details appear is completion statuses,
+``res`` and ``res2``. Their meaning depends on the module handling operations
+on used file descriptor, so python-libaio transmits these values without
+assuming their meaning (rather than, say, raise on negative values).
+
+Yet another place is application-initiated closures: there is a fundamental
+race-condition when cancelling an AIO block (maybe hardware-triggered
+completion will happen first, or maybe software-initiated cancellation will).
+In any case, a completion event will be produced and application may check
+which origin won. A consequence of this is that AIO context closure may take
+time: while requesting cancellation does not block, software should wait for
+hardware to hand the buffers back.
 
 python 2 Notes
 --------------
