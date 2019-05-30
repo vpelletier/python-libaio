@@ -141,7 +141,7 @@ class LibAIOTests(unittest.TestCase):
                     raise SkipTest('POLL kernel support missing')
                 self.assertEqual([], io_context.getEvents(min_nr=0))
                 self.assertEqual([], completion_event_list)
-                os.write(write_end, 'foo')
+                os.write(write_end, b'foo')
                 poll_event_list_reference = [(
                     poll_block,
                     select.EPOLLIN | select.EPOLLRDNORM,
