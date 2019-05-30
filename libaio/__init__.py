@@ -216,7 +216,7 @@ class AIOBlock(object):
         if value is None:
             self._iocb.aio_fildes = 0
         else:
-            self._iocb.aio_fildes = value.fileno()
+            self._iocb.aio_fildes = getattr(value, 'fileno', lambda: value)()
 
     @property
     def buffer_list(self):
