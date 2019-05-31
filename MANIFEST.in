@@ -1,2 +1,4 @@
 include versioneer.py
 include libaio/_version.py
+include COPYING
+include COPYING.LESSER
