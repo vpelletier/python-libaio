@@ -24,7 +24,7 @@ import tempfile
 import libaio
 
 class LibAIOTests(unittest.TestCase):
-    def testBasicFunctionality(self):
+    def testReadWrite(self):
         with tempfile.TemporaryFile() as temp, libaio.AIOContext(1) as io_context:
             def readall():
                 temp.seek(0)
@@ -83,14 +83,24 @@ class LibAIOTests(unittest.TestCase):
                 completion_event_list,
             )
             self.assertEqual(readall(), b'bluez')
-            del completion_event_list[:]
 
+    def testFsync(self):
+        with tempfile.TemporaryFile() as temp, libaio.AIOContext(1) as io_context:
+            completion_event_list = []
+            onCompletion = lambda block, res, res2: (
+                completion_event_list.append((block, res, res2))
+            )
             fsync_block = libaio.AIOBlock(
                 mode=libaio.AIOBLOCK_MODE_FSYNC,
                 target_file=temp,
                 onCompletion=onCompletion,
             )
-            io_context.submit([fsync_block])
+            try:
+                io_context.submit([fsync_block])
+            except OSError as exc:
+                if exc.errno != errno.EINVAL:
+                    raise
+                raise unittest.SkipTest('FSYNC kernel support missing')
             fsync_event_list_reference = [(fsync_block, 0, 0)]
             self.assertEqual(
                 fsync_event_list_reference,
@@ -100,14 +110,24 @@ class LibAIOTests(unittest.TestCase):
                 fsync_event_list_reference,
                 completion_event_list,
             )
-            del completion_event_list[:]
 
+    def testFDsync(self):
+        with tempfile.TemporaryFile() as temp, libaio.AIOContext(1) as io_context:
+            completion_event_list = []
+            onCompletion = lambda block, res, res2: (
+                completion_event_list.append((block, res, res2))
+            )
             fdsync_block = libaio.AIOBlock(
                 mode=libaio.AIOBLOCK_MODE_FDSYNC,
                 target_file=temp,
                 onCompletion=onCompletion,
             )
-            io_context.submit([fdsync_block])
+            try:
+                io_context.submit([fdsync_block])
+            except OSError as exc:
+                if exc.errno != errno.EINVAL:
+                    raise
+                raise unittest.SkipTest('FDSYNC kernel support missing')
             fdsync_event_list_reference = [(fdsync_block, 0, 0)]
             self.assertEqual(
                 fdsync_event_list_reference,
@@ -117,7 +137,6 @@ class LibAIOTests(unittest.TestCase):
                 fdsync_event_list_reference,
                 completion_event_list,
             )
-            del completion_event_list[:]
 
     def testPoll(self):
         with libaio.AIOContext(1) as io_context:
@@ -138,7 +157,7 @@ class LibAIOTests(unittest.TestCase):
                 except OSError as exc:
                     if exc.errno != errno.EINVAL:
                         raise
-                    raise SkipTest('POLL kernel support missing')
+                    raise unittest.SkipTest('POLL kernel support missing')
                 self.assertEqual([], io_context.getEvents(min_nr=0))
                 self.assertEqual([], completion_event_list)
                 os.write(write_end, b'foo')
@@ -155,7 +174,6 @@ class LibAIOTests(unittest.TestCase):
                     poll_event_list_reference,
                     completion_event_list,
                 )
-                del completion_event_list[:]
             finally:
                 os.close(write_end)
                 os.close(read_end)
