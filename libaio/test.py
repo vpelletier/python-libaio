@@ -138,7 +138,7 @@ class LibAIOTests(unittest.TestCase):
                 except OSError as exc:
                     if exc.errno != errno.EINVAL:
                         raise
-                    raise SkipTest('POLL kernel support missing')
+                    raise unittest.SkipTest('POLL kernel support missing')
                 self.assertEqual([], io_context.getEvents(min_nr=0))
                 self.assertEqual([], completion_event_list)
                 os.write(write_end, b'foo')
