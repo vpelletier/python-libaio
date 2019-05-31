@@ -547,3 +547,7 @@ class AIOContext(object):
             self._eventToPython(event_buffer[x])
             for x in xrange(actual_nr)
         ]
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

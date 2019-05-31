@@ -17,6 +17,7 @@ from setuptools import setup
 from codecs import open
 import os
 import sys
+import versioneer
 
 long_description = open(
     os.path.join(os.path.dirname(__file__), 'README.rst'),
@@ -25,10 +26,11 @@ long_description = open(
 
 setup(
     name='libaio',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description=next(x for x in long_description.splitlines() if x.strip()),
     long_description='.. contents::\n\n' + long_description,
     keywords='linux aio libaio',
-    version='0.6',
     author='Vincent Pelletier',
     author_email='plr.vincent@gmail.com',
     url='http://github.com/vpelletier/python-libaio',

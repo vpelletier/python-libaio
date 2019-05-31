@@ -1,0 +1,2 @@
+include versioneer.py
+include libaio/_version.py
