@@ -33,6 +33,10 @@ from . import ioprio
 from .linux_fs import *
 from .ioprio import *
 # pylint: enable=wildcard-import
+import sys
+
+if sys.version_info[0] == 2:
+    range = xrange
 
 __all__ = (
     'EFD_CLOEXEC', 'EFD_NONBLOCK', 'EFD_SEMAPHORE',
@@ -114,7 +118,7 @@ class AIOBlock(object):
         AIOBLOCK_MODE_POLL: libaio.IO_CMD_POLL,
     }
     _REVERSE_AIOBLOCK_MODE_DICT = {
-        y: x for x, y in _AIOBLOCK_MODE_DICT.iteritems()
+        y: x for x, y in _AIOBLOCK_MODE_DICT.items()
     }
     assert len(_AIOBLOCK_MODE_DICT) == len(_REVERSE_AIOBLOCK_MODE_DICT)
 
@@ -493,7 +497,7 @@ class AIOContext(object):
         """
         cancel = self.cancel
         result = []
-        for block, _ in self._submitted.itervalues():
+        for block, _ in self._submitted.values():
             try:
                 result.append(cancel(block))
             except OSError as exc:
@@ -545,7 +549,7 @@ class AIOContext(object):
         )
         return [
             self._eventToPython(event_buffer[x])
-            for x in xrange(actual_nr)
+            for x in range(actual_nr)
         ]
 
 from ._version import get_versions
