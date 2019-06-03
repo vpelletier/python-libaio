@@ -2,10 +2,7 @@
 ignore=_version.py
 
 [MESSAGES CONTROL]
-disable=C0103,C0330,R0903
-# C0103 "Invalid name "%s" (should match %s)"
-# C0330 bad-continuation
-# R0903 too-few-public-methods
+disable=invalid-name,bad-continuation,too-few-public-methods,too-many-instance-attributes,too-many-arguments
 
 [FORMAT]
 indent-string="    "

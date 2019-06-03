@@ -34,9 +34,14 @@ from . import ioprio
 from .linux_fs import *
 from .ioprio import *
 # pylint: enable=wildcard-import
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
 
 if sys.version_info[0] == 2:
+    # pylint: disable=redefined-builtin
     range = xrange
+    # pylint: enable=redefined-builtin
 
 __all__ = (
     'EFD_CLOEXEC', 'EFD_NONBLOCK', 'EFD_SEMAPHORE',
@@ -121,6 +126,11 @@ class AIOBlock(object):
         y: x for x, y in _AIOBLOCK_MODE_DICT.items()
     }
     assert len(_AIOBLOCK_MODE_DICT) == len(_REVERSE_AIOBLOCK_MODE_DICT)
+    _buffer_list = None
+    _eventfd = None
+    _file = None
+    _iovec = None
+    _onCompletion = None
 
     def __init__(
         self,
@@ -551,7 +561,3 @@ class AIOContext(object):
             self._eventToPython(event_buffer[x])
             for x in range(actual_nr)
         ]
-
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions

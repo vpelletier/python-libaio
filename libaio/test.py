@@ -14,6 +14,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with python-libaio.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Testing libaio.
+"""
 from __future__ import absolute_import, print_function
 import errno
 from mmap import mmap
@@ -24,9 +27,18 @@ import tempfile
 import libaio
 
 class LibAIOTests(unittest.TestCase):
+    """
+    Testing libaio.
+    """
     def testReadWrite(self):
+        """
+        Most baic functions: without these, libaio will not be of much use.
+        """
         with tempfile.TemporaryFile() as temp, libaio.AIOContext(1) as io_context:
             def readall():
+                """
+                Reread the whole tempfile.
+                """
                 temp.seek(0)
                 return temp.read()
             temp.write(b'blah')
@@ -85,6 +97,10 @@ class LibAIOTests(unittest.TestCase):
             self.assertEqual(readall(), b'bluez')
 
     def testFsync(self):
+        """
+        FSYNC was introduced in a later kernel version than READ/WRITE.
+        (along with FDSYNC)
+        """
         with tempfile.TemporaryFile() as temp, libaio.AIOContext(1) as io_context:
             completion_event_list = []
             onCompletion = lambda block, res, res2: (
@@ -112,6 +128,10 @@ class LibAIOTests(unittest.TestCase):
             )
 
     def testFDsync(self):
+        """
+        FDSYNC was introduced in a later kernel version than READ/WRITE.
+        (along with FSYNC)
+        """
         with tempfile.TemporaryFile() as temp, libaio.AIOContext(1) as io_context:
             completion_event_list = []
             onCompletion = lambda block, res, res2: (
@@ -139,6 +159,9 @@ class LibAIOTests(unittest.TestCase):
             )
 
     def testPoll(self):
+        """
+        POLL was introduced in a later kernel version than FSYNC/FDSYNC.
+        """
         with libaio.AIOContext(1) as io_context:
             completion_event_list = []
             onCompletion = lambda block, res, res2: (
