@@ -148,7 +148,7 @@ io_event_p = POINTER(io_event)
 
 del PADDED, PADDEDptr, PADDEDul, PADDEDl
 
-io_callback_t = CFUNCTYPE(None, io_context_t, iocb, c_long, c_long)
+io_callback_t = CFUNCTYPE(None, io_context_t, iocb_p, c_long, c_long)
 
 libaio = CDLL('libaio.so.1')
 # pylint: disable=unused-argument
