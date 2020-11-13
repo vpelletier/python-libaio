@@ -62,7 +62,7 @@ class EventFD(object):
         flags (int)
             Bit mask of EFD_* constants.
         """
-        self._file = os.fdopen(eventfd(initval, flags), 'r+b')
+        self._file = os.fdopen(eventfd(initval, flags), 'r+b', 0)
 
     def __enter__(self):
         """
