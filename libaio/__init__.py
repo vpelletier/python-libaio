@@ -88,7 +88,10 @@ class EventFD(object):
 
         See manpage for flags effect on this.
         """
-        return unpack('Q', self._file.read(8))[0]
+        result = self._file.read(8)
+        if result:
+            return unpack('Q', result)[0]
+        return None
 
     def write(self, value):
         """
