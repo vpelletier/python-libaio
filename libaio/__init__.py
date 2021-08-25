@@ -299,7 +299,7 @@ class AIOBlock(object):
 
         Only available in mode != AIOBLOCK_MODE_POLL.
         """
-        return self._iocb.u.c.offset.value
+        return self._iocb.u.c.offset
 
     @offset.setter
     def offset(self, value):
