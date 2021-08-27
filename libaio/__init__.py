@@ -284,7 +284,7 @@ class AIOBlock(object):
         """
         if self._iocb.aio_lio_opcode != libaio.IO_CMD_POLL:
             raise AttributeError
-        return self._iocb.u.c.buf.value
+        return self._iocb.u.c.buf
 
     @event_mask.setter
     def event_mask(self, value):

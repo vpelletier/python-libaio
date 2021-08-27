@@ -26,6 +26,9 @@ import select
 import tempfile
 import libaio
 
+# BBB: <3.7
+RWF_NOWAIT = getattr(os, 'RWF_NOWAIT', 8)
+
 class LibAIOTests(unittest.TestCase):
     """
     Testing libaio.
@@ -50,16 +53,36 @@ class LibAIOTests(unittest.TestCase):
 
             read_buf_0 = bytearray(2)
             read_buf_1 = mmap(-1, 2)
+            read_buffer_list = [
+                read_buf_0,
+                read_buf_1,
+            ]
             read_block = libaio.AIOBlock(
                 mode=libaio.AIOBLOCK_MODE_READ,
                 target_file=temp,
-                buffer_list=[
-                    read_buf_0,
-                    read_buf_1,
-                ],
+                buffer_list=read_buffer_list,
                 offset=0,
                 onCompletion=onCompletion,
             )
+            self.assertEqual(read_block.mode, libaio.AIOBLOCK_MODE_READ)
+            self.assertEqual(
+                len(read_block.buffer_list),
+                len(read_buffer_list),
+            )
+            self.assertIs(read_block.buffer_list[0], read_buf_0)
+            self.assertIs(read_block.buffer_list[1], read_buf_1)
+            self.assertEqual(read_block.offset, 0)
+            self.assertEqual(read_block.io_priority, None)
+            read_block.io_priority = 1
+            self.assertEqual(read_block.io_priority, 1)
+            read_block.io_priority = None
+            self.assertEqual(read_block.io_priority, None)
+            self.assertEqual(read_block.rw_flags, 0)
+            read_block.rw_flags = RWF_NOWAIT
+            self.assertEqual(read_block.rw_flags, RWF_NOWAIT)
+            read_block.rw_flags = 0
+            self.assertEqual(read_block.rw_flags, 0)
+            self.assertEqual(read_block.target_file, temp)
             io_context.submit([read_block])
             read_event_list_reference = [(read_block, 4, 0)]
             self.assertEqual(
@@ -74,16 +97,25 @@ class LibAIOTests(unittest.TestCase):
             self.assertEqual(list(read_buf_1), [b'a', b'h'])
             del completion_event_list[:]
 
+            write_buffer_list = [
+                bytearray(b'u'),
+                bytearray(b'ez'),
+            ]
             write_block = libaio.AIOBlock(
                 mode=libaio.AIOBLOCK_MODE_WRITE,
                 target_file=temp,
-                buffer_list=[
-                    bytearray(b'u'),
-                    bytearray(b'ez'),
-                ],
+                buffer_list=write_buffer_list,
                 offset=2,
                 onCompletion=onCompletion,
             )
+            self.assertEqual(write_block.mode, libaio.AIOBLOCK_MODE_WRITE)
+            self.assertEqual(
+                len(write_block.buffer_list),
+                len(write_buffer_list),
+            )
+            self.assertIs(write_block.buffer_list[0], write_buffer_list[0])
+            self.assertIs(write_block.buffer_list[1], write_buffer_list[1])
+            self.assertEqual(write_block.offset, 2)
             io_context.submit([write_block])
             write_event_list_reference = [(write_block, 3, 0)]
             self.assertEqual(
@@ -175,6 +207,7 @@ class LibAIOTests(unittest.TestCase):
                     onCompletion=onCompletion,
                     event_mask=select.EPOLLIN,
                 )
+                self.assertEqual(poll_block.event_mask, select.EPOLLIN)
                 try:
                     io_context.submit([poll_block])
                 except OSError as exc:
