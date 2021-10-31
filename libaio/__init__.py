@@ -39,9 +39,9 @@ __version__ = get_versions()['version']
 del get_versions
 
 if sys.version_info[0] == 2:
-    # pylint: disable=redefined-builtin
+    # pylint: disable=redefined-builtin, undefined-variable
     range = xrange
-    # pylint: enable=redefined-builtin
+    # pylint: enable=redefined-builtin, undefined-variable
 
 __all__ = (
     'EFD_CLOEXEC', 'EFD_NONBLOCK', 'EFD_SEMAPHORE',
