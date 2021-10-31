@@ -446,25 +446,34 @@ class AIOContext(object):
         # A non-set file will cause an AIO block on stdin, which is likely not
         # expected. Do this extra check when assertions are enabled.
         assert not any(x.target_file is None for x in block_list)
-        # io_submit ioctl will only return an error for issues with the first
-        # transfer block. If there are issues with a later block, it will stop
-        # submission and return the number of submitted blocks. So it is safe
-        # to only update self._submitted once io_submit returned.
-        submitted_count = libaio.io_submit(
-            self._ctx,
-            len(block_list),
-            (libaio.iocb_p * len(block_list))(*[
-                # pylint: disable=protected-access
-                pointer(x._iocb)
-                # pylint: enable=protected-access
-                for x in block_list
-            ]),
-        )
         submitted = self._submitted
-        for block in block_list[:submitted_count]:
-            # pylint: disable=protected-access
-            submitted[addressof(block._iocb)] = (block, block._getSubmissionState())
-            # pylint: enable=protected-access
+        tested_count = submitted_count = 0
+        try:
+            for tested_count, block in enumerate(block_list, 1):
+                # pylint: disable=protected-access
+                block_key = addressof(block._iocb)
+                # pylint: enable=protected-access
+                if block_key in submitted:
+                    raise ValueError('Already submitted: %r' % (block, ))
+                # pylint: disable=protected-access
+                submitted[block_key] = (block, block._getSubmissionState())
+                # pylint: enable=protected-access
+            submitted_count = libaio.io_submit(
+                self._ctx,
+                len(block_list),
+                (libaio.iocb_p * len(block_list))(*[
+                    # pylint: disable=protected-access
+                    pointer(x._iocb)
+                    # pylint: enable=protected-access
+                    for x in block_list
+                ]),
+            )
+        finally:
+            # Remove any non-submitted transfer
+            for block in block_list[submitted_count:tested_count]:
+                # pylint: disable=protected-access
+                submitted.pop(addressof(block._iocb), None)
+                # pylint: enable=protected-access
         return submitted_count
 
     def _eventToPython(self, event):

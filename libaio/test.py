@@ -83,7 +83,21 @@ class LibAIOTests(unittest.TestCase):
             read_block.rw_flags = 0
             self.assertEqual(read_block.rw_flags, 0)
             self.assertEqual(read_block.target_file, temp)
+            # Submitting the same block multiple times fails
+            self.assertRaises(
+                ValueError,
+                io_context.submit,
+                [read_block, read_block],
+            )
+            # and the whole submition was undone, so it is possible to submit
             io_context.submit([read_block])
+            # but submitting the same block again fails and (later) handling
+            # completion of the successfuly submitted block must succeed.
+            self.assertRaises(
+                ValueError,
+                io_context.submit,
+                [read_block],
+            )
             read_event_list_reference = [(read_block, 4, 0)]
             self.assertEqual(
                 read_event_list_reference,
