@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2019  Vincent Pelletier <plr.vincent@gmail.com>
+# Copyright (C) 2017-2021  Vincent Pelletier <plr.vincent@gmail.com>
 #
 # This file is part of python-libaio.
 # python-libaio is free software: you can redistribute it and/or modify
