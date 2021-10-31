@@ -449,7 +449,7 @@ class AIOContext(object):
         submitted = self._submitted
         tested_count = submitted_count = 0
         try:
-            for tested_count, block in enumerate(block_list, 1):
+            for tested_count, block in enumerate(block_list):
                 # pylint: disable=protected-access
                 block_key = addressof(block._iocb)
                 # pylint: enable=protected-access
@@ -458,6 +458,7 @@ class AIOContext(object):
                 # pylint: disable=protected-access
                 submitted[block_key] = (block, block._getSubmissionState())
                 # pylint: enable=protected-access
+            tested_count += 1
             submitted_count = libaio.io_submit(
                 self._ctx,
                 len(block_list),
