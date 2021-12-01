@@ -34,9 +34,8 @@ from . import ioprio
 from .linux_fs import *
 from .ioprio import *
 # pylint: enable=wildcard-import
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
+from . import _version
+__version__ = _version.get_versions()['version']
 
 if sys.version_info[0] == 2:
     # pylint: disable=redefined-builtin, undefined-variable
