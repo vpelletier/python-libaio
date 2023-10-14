@@ -30,6 +30,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     description=next(x for x in long_description.splitlines() if x.strip()),
     long_description='.. contents::\n\n' + long_description,
+    long_description_content_type='text/x-rst',
     keywords='linux aio libaio',
     author='Vincent Pelletier',
     author_email='plr.vincent@gmail.com',
