@@ -216,8 +216,17 @@ def io_prep_preadv2(iocb, fd, iov, iovcnt, offset, flags):
 def io_prep_pwritev2(iocb, fd, iov, iovcnt, offset, flags):
     _io_prep_prw(IO_CMD_PWRITEV, iocb, fd, cast(iov, c_void_p), iovcnt, offset, flags)
 
-# io_prep_poll
-# io_poll
+def io_prep_poll(iocb, fb, events):
+    zero(iocb)
+    iocb.aio_fildes = fd
+    iocb.aio_lio_opcode = IO_CMD_POLL
+    iocb.aio_reqprio = 0
+    iocb.u.poll.events = events
+
+def io_poll(ctx, iocb, cb, fd, events):
+    io_prep_poll(iocb, fb, events)
+    io_set_callback(iocb, cb)
+    return io_submit(ctx, 1, iocb_pp(byref(iocb)))
 
 def io_prep_fsync(iocb, fd):
     zero(iocb)
