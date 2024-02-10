@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with python-libaio.  If not, see <http://www.gnu.org/licenses/>.
 """
-Minimal adaptation of sys/eventfd.h and bits/eventfs.h .
+Minimal adaptation of sys/eventfd.h and bits/eventfd.h .
 """
 from ctypes import CDLL, c_uint, c_int, get_errno
 from ctypes.util import find_library
