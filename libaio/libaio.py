@@ -150,7 +150,10 @@ del PADDED, PADDEDptr, PADDEDul, PADDEDl
 
 io_callback_t = CFUNCTYPE(None, io_context_t, iocb_p, c_long, c_long)
 
-libaio = CDLL('libaio.so.1')
+try:
+    libaio = CDLL('libaio.so.1t64')
+except FileNotFoundError:
+    libaio = CDLL('libaio.so.1')
 # pylint: disable=unused-argument
 def _raise_on_negative(result, func, arguments):
     if result < 0:
