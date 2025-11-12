@@ -152,7 +152,7 @@ io_callback_t = CFUNCTYPE(None, io_context_t, iocb_p, c_long, c_long)
 
 try:
     libaio = CDLL('libaio.so.1t64')
-except FileNotFoundError:
+except (OSError, FileNotFoundError):
     libaio = CDLL('libaio.so.1')
 # pylint: disable=unused-argument
 def _raise_on_negative(result, func, arguments):
