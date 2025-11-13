@@ -35,12 +35,11 @@ setup(
     author='Vincent Pelletier',
     author_email='plr.vincent@gmail.com',
     url='http://github.com/vpelletier/python-libaio',
-    license='LGPLv3+',
+    license='LGPL-3.0-or-later',
     platforms=['linux'],
     packages=['libaio'],
     classifiers=[
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
